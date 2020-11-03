@@ -25,6 +25,8 @@ jwt_get_username_from_payload = api_settings.JWT_PAYLOAD_GET_USERNAME_HANDLER
 jwt_response_payload_handler = api_settings.JWT_RESPONSE_PAYLOAD_HANDLER
 from django.contrib.auth.models import User
 from .models import UserDevice
+from keychain.models import KeyChain
+from keychain.lib import *
 from django.contrib.auth import authenticate
 
 class generateKey:
@@ -38,28 +40,31 @@ class AuthView(viewsets.ModelViewSet):
     permission_classes = ()
     serializer_class = UserSerializer
     queryset = User.objects.all()
+
+    @action(detail=False, url_path='verify', methods=['post'])
     def verifyUser(self, request):
         username = request.data['username']
         password = request.data['password']
         try:
             user =  User.objects.get(username=username)
             if check_password(password, user.password):
-                return Response("checked_succesfully", 200)
+                phone = UserDevice.objects.get(user__username=username) 
+                return Response(phone.id, 200)
             else:
-                return Response("Invalid credentials", 401)
+                return Response(password, 401)
         except (Exception) as e:
             return Response("Invalid credentials", 401)
 
     @action(detail=False, url_path='otp/(?P<pk>\d+)', methods=['get'])
     def getTwoToken(self, request, pk):
-        phone = UserDevice.objects.get(pk=pk)
+        phone = UserDevice.objects.get(pk=pk) 
         phone.otp_counter+=1
         phone.save()
         keygen = generateKey()
         key = base64.b32encode(keygen.returnValue(phone.number).encode())
         OTP = pyotp.HOTP(key)
         account_sid = 'ACc2525a5beaaf32d91f9eb14969f3831e'
-        auth_token = '327b07917e5544521917398fe5e7fc56'
+        auth_token = '83b537264f0453ab5cf6e0f1060c6020'
         client = Client(account_sid, auth_token)
         otpToken = OTP.at(phone.otp_counter)
         message = client.messages.create(
@@ -101,7 +106,6 @@ class RegisterView(viewsets.ModelViewSet):
     def create(self, request):
         try:
             first_name = request.data['first_name']
-            
             email = request.data['email']
             username = request.data['username']
             phone = request.data['phone_number']
@@ -111,6 +115,11 @@ class RegisterView(viewsets.ModelViewSet):
             user.save()
             phone = UserDevice(number=phone, user=user, otp_counter=0)
             phone.save()
+
+            userId = create_hmac_sha256_signature(generate_derivation(masterPass="55555",seed="65C6AEdf045CFbb9d3D818CC7a708d6c", num= sumOrd(username) // len(username)), user.id)
+            keychain = KeyChain(owner=userId, key=generate_random_string(16), otp_counter=0)
+            keychain.save()
+
             serializer_context = {'request': Request(request._request)}
             return Response(UserSerializer(user, context=serializer_context).data)
         except (IntegrityError) as e:

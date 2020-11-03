@@ -14,6 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from Auth import views as authViews
+from keychain import views as keyChainViews
 from django.contrib import admin
 from django.urls import include, path
 from django.urls import path
@@ -29,11 +30,14 @@ from rest_framework import routers, serializers, viewsets
 # )
 router = routers.DefaultRouter()
 router.register(r'auth', authViews.AuthView)
+router.register(r'keychain', keyChainViews.KeyChainView)
+
 urlpatterns = [
-    path('api/', include(router.urls)),
+    url(r'api/', include(router.urls)),
     # url(r'^api/login/', obtain_jwt_token),
     # url(r'^api/otp/(P<pk>\D+)/', authViews.AuthView.as_view({'get': 'getTwoToken'})),
     url(r'^api/login/', authViews.AuthView.as_view({'post': 'login'})),
+    
     path('admin/', admin.site.urls),
     url(r'^api/register/', authViews.RegisterView.as_view({'post': 'create'} )),
 ]
