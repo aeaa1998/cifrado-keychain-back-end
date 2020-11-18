@@ -96,8 +96,8 @@ class KeyChainView(viewsets.ModelViewSet):
         keygen = generateKey()
         key = base64.b32encode(keygen.returnValue(keychain).encode())
         OTP = pyotp.HOTP(key)
-        account_sid = 'ACc2525a5beaaf32d91f9eb14969f3831e'
-        auth_token = '83b537264f0453ab5cf6e0f1060c6020'
+        account_sid = 'sid'
+        auth_token = 'token'
         client = Client(account_sid, auth_token)
         otpToken = OTP.at(keychain.otp_counter)
         message = client.messages.create(
