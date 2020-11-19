@@ -63,8 +63,8 @@ class AuthView(viewsets.ModelViewSet):
         keygen = generateKey()
         key = base64.b32encode(keygen.returnValue(phone.number).encode())
         OTP = pyotp.HOTP(key)
-        account_sid = 'sid'
-        auth_token = 'token'
+        account_sid = 'ACc2525a5beaaf32d91f9eb14969f3831e'
+        auth_token = 'cce370de5f5e48118a03522bf8bb04bd'
         client = Client(account_sid, auth_token)
         otpToken = OTP.at(phone.otp_counter)
         message = client.messages.create(

@@ -27,7 +27,9 @@ SECRET_KEY = 'loks+fvrz$h3nfms^xwuegams6b$kmsxopm%nm#n06*ni5nd_z'
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
-
+CRON_CLASSES = [
+    "keychain.cron.CheckIntegrity",
+]
 
 # Application definition
 
@@ -40,7 +42,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'Auth.apps.AuthConfig',
     'corsheaders',
-    'keychain.apps.KeychainConfig'
+    'keychain.apps.KeychainConfig',
+    'django_cron'
 ]
 
 MIDDLEWARE = [
@@ -120,7 +123,7 @@ REST_FRAMEWORK = {
 JWT_AUTH = {
     'JWT_ALLOW_REFRESH': True,
     'JWT_RESPONSE_PAYLOAD_HANDLER':'Auth.utils.jwt_response_payload_handler',
-    'JWT_EXPIRATION_DELTA': timedelta(seconds=10),
+    'JWT_EXPIRATION_DELTA': timedelta(days=10),
     'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=78),
 }
 

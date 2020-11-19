@@ -3,7 +3,9 @@ from rest_framework import routers, serializers, viewsets
 from rest_framework.response import Response
 from rest_framework.request import Request
 import json
+from django.core.files.storage import FileSystemStorage
 import base64
+import os
 from datetime import *
 import pyotp
 from twilio.rest import Client
@@ -34,8 +36,11 @@ class KeyChainView(viewsets.ModelViewSet):
         raw_apps = App.objects.filter(keychain__pk=keychain.id)
         apps = []
         for app in raw_apps:
-            app.password = m_decrypt(app.password, keychain.key)
+            # if not app.integrity_ckeck == sha256(app.password.encode()).hexdigest():
+            #     return HttpResponse(json.dumps({"error" : "Password Altered"}), 401)
+            app.password = m_decrypt(app.password, keychain.key)    
             apps.append(app)
+        
         serializer_context = {'request': Request(request._request)}
         return Response(AppSerializer(apps, many=True, context=serializer_context).data, 200)
     
@@ -46,7 +51,7 @@ class KeyChainView(viewsets.ModelViewSet):
         if App.objects.filter(keychain__pk=keychain.id).filter(name=request.data['name']).exists():
             return Response("El nombre ya ya sido usado", 404)
     
-        # request.data._mutable = True
+        request.data._mutable = True
         request.data['keychain'] = keychain.id
         request.data['password'] = m_encrypt(request.data["password"], keychain.key.encode())
         request.data['integrity_ckeck'] = sha256(request.data['password'].encode()).hexdigest()
@@ -55,6 +60,13 @@ class KeyChainView(viewsets.ModelViewSet):
         if serializer.is_valid():
             serializer.save()
             app = App.objects.get(pk=serializer.data['id'])
+            folder = os.path.join("keychain/dumps/" + str(keychain.id) + "/", str(app.id))
+            os.mkdir(folder)
+            f=open("dump.txt","w+")
+            f.write(request.data['password'])
+            fs = FileSystemStorage(location=folder)
+            filename = fs.save("dump.txt", f)
+            f.close() 
             serializer_context = {'request': Request(request._request)}
             return Response(AppSerializer(app, context=serializer_context).data, 200)
 			# return Response(data=serializer.data, status=200)
@@ -96,8 +108,8 @@ class KeyChainView(viewsets.ModelViewSet):
         keygen = generateKey()
         key = base64.b32encode(keygen.returnValue(keychain).encode())
         OTP = pyotp.HOTP(key)
-        account_sid = 'sid'
-        auth_token = 'token'
+        account_sid = 'ACc2525a5beaaf32d91f9eb14969f3831e'
+        auth_token = 'cce370de5f5e48118a03522bf8bb04bd'
         client = Client(account_sid, auth_token)
         otpToken = OTP.at(keychain.otp_counter)
         message = client.messages.create(
@@ -120,6 +132,19 @@ class KeyChainView(viewsets.ModelViewSet):
             app.password = m_encrypt(request.data["password"], keychain.key.encode())
             app.integrity_ckeck = sha256(app.password.encode()).hexdigest()
             app.save()
+            folder = os.path.join("keychain/dumps/" + str(keychain.id) + "/", str(app.id))
+            try:
+                os.mkdir(folder)
+                f=open("dump.txt","w+")
+                f.write(app.password)
+                fs = FileSystemStorage(location=folder)
+                filename = fs.save("dump.txt", f)
+                f.close() 
+            except:
+                f=open(folder + "/dump.txt","w+")
+                f.write(app.password)
+                f.close() 
+ 
             keychain.otp_counter +=1
             keychain.save()
             return Response("password reseted", 200)

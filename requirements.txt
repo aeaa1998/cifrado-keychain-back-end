@@ -10,3 +10,4 @@ pycryptodome
 twillo
 pycrypto
 django-cors-headers
+django-cron
